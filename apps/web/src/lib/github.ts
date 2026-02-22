@@ -121,7 +121,6 @@ interface LocalFirstGitReadOptions<T> {
 	fetchRemote: (octokit: Octokit) => Promise<T>;
 }
 
-
 const globalForGithubSync = globalThis as typeof globalThis & {
 	__githubSyncDrainingUsers?: Set<string>;
 };
@@ -2777,7 +2776,7 @@ function mapGraphQLIssueNode(node: Record<string, any>): RepoIssueNode {
 		number: node.number,
 		title: node.title,
 		state: (node.state as string).toLowerCase(),
-		state_reason: node.stateReason ? stateReasonMap[node.stateReason] ?? null : null,
+		state_reason: node.stateReason ? (stateReasonMap[node.stateReason] ?? null) : null,
 		updated_at: node.updatedAt,
 		created_at: node.createdAt,
 		closed_at: node.closedAt ?? null,
@@ -2838,10 +2837,7 @@ function buildRepoIssuesPageCacheKey(owner: string, repo: string): string {
 	return `repo_issues_page:${normalizeRepoKey(owner, repo)}`;
 }
 
-export async function getRepoIssuesPage(
-	owner: string,
-	repo: string,
-): Promise<RepoIssuesPageData> {
+export async function getRepoIssuesPage(owner: string, repo: string): Promise<RepoIssuesPageData> {
 	const authCtx = await getGitHubAuthContext();
 	const fallback: RepoIssuesPageData = {
 		openIssues: [],
@@ -3061,7 +3057,10 @@ function mapGraphQLPRNode(pr: Record<string, unknown>) {
 		(
 			pr.reviewRequests as {
 				nodes: {
-					requestedReviewer: { login: string; avatarUrl: string } | null;
+					requestedReviewer: {
+						login: string;
+						avatarUrl: string;
+					} | null;
 				}[];
 			}
 		)?.nodes ?? []
@@ -3122,7 +3121,12 @@ export async function getRepoPullRequestsWithStats(
 	owner: string,
 	repo: string,
 	state: "open" | "closed" | "all" = "open",
-	opts?: { includeCounts?: boolean; previewClosed?: number; perPage?: number; cursor?: string | null },
+	opts?: {
+		includeCounts?: boolean;
+		previewClosed?: number;
+		perPage?: number;
+		cursor?: string | null;
+	},
 ): Promise<PRPageResult> {
 	const token = await getGitHubToken();
 	if (!token) return EMPTY_PAGE_RESULT;
@@ -3206,11 +3210,21 @@ export async function getRepoPullRequestsWithStats(
 
 		const mergedPreview =
 			previewCount > 0
-				? ((repo_data.mergedPreview?.nodes ?? []) as Record<string, unknown>[]).map(mapGraphQLPRNode)
+				? (
+						(repo_data.mergedPreview?.nodes ?? []) as Record<
+							string,
+							unknown
+						>[]
+					).map(mapGraphQLPRNode)
 				: [];
 		const closedPreview =
 			previewCount > 0
-				? ((repo_data.closedPreview?.nodes ?? []) as Record<string, unknown>[]).map(mapGraphQLPRNode)
+				? (
+						(repo_data.closedPreview?.nodes ?? []) as Record<
+							string,
+							unknown
+						>[]
+					).map(mapGraphQLPRNode)
 				: [];
 
 		return { prs, pageInfo, counts, mergedPreview, closedPreview };
@@ -3524,7 +3538,11 @@ export async function getCachedCheckStatus(
 	return null;
 }
 
-export async function prefetchPRData(owner: string, repo: string, opts?: { prefetchIssues?: boolean }) {
+export async function prefetchPRData(
+	owner: string,
+	repo: string,
+	opts?: { prefetchIssues?: boolean },
+) {
 	try {
 		const rKey = checkStatusRedisKey(owner, repo);
 		const cached = await redis.get(rKey);
@@ -3532,7 +3550,13 @@ export async function prefetchPRData(owner: string, repo: string, opts?: { prefe
 			? Promise.resolve()
 			: getRepoPullRequestsWithStats(owner, repo, "open").then(({ prs }) =>
 					prs.length > 0
-						? batchFetchCheckStatuses(owner, repo, prs.map((pr) => ({ number: pr.number }))).then(() => {})
+						? batchFetchCheckStatuses(
+								owner,
+								repo,
+								prs.map((pr) => ({
+									number: pr.number,
+								})),
+							).then(() => {})
 						: undefined,
 				);
 
@@ -4283,6 +4307,10 @@ export async function getLanguages(owner: string, repo: string): Promise<Record<
 
 // --- Combined repo page data via single GraphQL call ---
 
+export type RepoPageDataResult =
+	| { success: true; data: RepoPageData }
+	| { success: false; error: string };
+
 export interface RepoPageData {
 	repoData: {
 		description?: string;
@@ -4404,11 +4432,25 @@ async function fetchRepoPageDataGraphQL(
 
 	if (!response.ok) throw new Error(`GraphQL request failed: ${response.status}`);
 	const json = await response.json();
-	const r = json.data?.repository;
-	if (!r) return null;
 
-	const viewerIsOrgMember: boolean =
-		json.data?.organization?.viewerIsAMember ?? false;
+	if (json.errors?.length) {
+		const errorMessages = json.errors
+			.map((e: { message: string }) => e.message)
+			.join("; ");
+		console.error(
+			`[fetchRepoPageDataGraphQL] GitHub API error for ${owner}/${repo}:`,
+			errorMessages,
+		);
+		throw new Error(errorMessages);
+	}
+
+	const r = json.data?.repository;
+	if (!r) {
+		console.warn(`[fetchRepoPageDataGraphQL] Repository not found: ${owner}/${repo}`);
+		return null;
+	}
+
+	const viewerIsOrgMember: boolean = json.data?.organization?.viewerIsAMember ?? false;
 
 	const languages: Record<string, number> = {};
 	for (const edge of r.languages?.edges ?? []) {
@@ -4486,10 +4528,10 @@ async function fetchRepoPageDataGraphQL(
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const getRepoPageData = cache(
-	async (owner: string, repo: string): Promise<RepoPageData | null> => {
+	async (owner: string, repo: string): Promise<RepoPageDataResult> => {
 		const { getCachedRepoPageData } = await import("@/lib/repo-data-cache-vc");
 		const cached = await getCachedRepoPageData<RepoPageData>(owner, repo);
-		if (cached) return cached;
+		if (cached) return { success: true, data: cached };
 
 		return fetchAndCacheRepoPageData(owner, repo);
 	},
@@ -4498,13 +4540,13 @@ export const getRepoPageData = cache(
 export async function fetchAndCacheRepoPageData(
 	owner: string,
 	repo: string,
-): Promise<RepoPageData | null> {
+): Promise<RepoPageDataResult> {
 	const authCtx = await getGitHubAuthContext();
-	if (!authCtx) return null;
+	if (!authCtx) return { success: false, error: "Not authenticated" };
 
 	try {
 		const result = await fetchRepoPageDataGraphQL(authCtx.token, owner, repo);
-		if (!result) return null;
+		if (!result) return { success: false, error: "Repository not found" };
 
 		const { setCachedRepoPageData } = await import("@/lib/repo-data-cache");
 		const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
@@ -4526,9 +4568,11 @@ export async function fetchAndCacheRepoPageData(
 			cacheDefaultBranch(owner, repo, result.repoData.default_branch),
 		]);
 
-		return result;
-	} catch {
-		return null;
+		return { success: true, data: result };
+	} catch (error) {
+		console.error(`[fetchAndCacheRepoPageData] Failed for ${owner}/${repo}:`, error);
+		const message = error instanceof Error ? error.message : "Unknown error";
+		return { success: false, error: message };
 	}
 }
 
@@ -4540,7 +4584,8 @@ export async function getRepoOverviewData(
 	languages: Record<string, number>;
 }> {
 	const result = await getRepoPageData(owner, repo);
-	if (result) return { navCounts: result.navCounts, languages: result.languages };
+	if (result.success)
+		return { navCounts: result.data.navCounts, languages: result.data.languages };
 	return {
 		navCounts: { openPrs: 0, openIssues: 0, activeRuns: 0 },
 		languages: {},
@@ -4732,7 +4777,11 @@ export async function getAuthorDossier(
 	authorLogin: string,
 ): Promise<AuthorDossierResult | null> {
 	try {
-		const cached = await getCachedAuthorDossier<AuthorDossierResult>(owner, repo, authorLogin);
+		const cached = await getCachedAuthorDossier<AuthorDossierResult>(
+			owner,
+			repo,
+			authorLogin,
+		);
 		if (cached) return cached;
 
 		const token = await getGitHubToken();
@@ -4785,11 +4834,12 @@ export async function getAuthorDossier(
 		const u = json.data?.user;
 		if (!u) return null;
 
-		const orgs: { login: string; avatar_url: string }[] =
-			(u.organizations?.nodes ?? []).map((o: any) => ({
-				login: o.login,
-				avatar_url: o.avatarUrl,
-			}));
+		const orgs: { login: string; avatar_url: string }[] = (
+			u.organizations?.nodes ?? []
+		).map((o: any) => ({
+			login: o.login,
+			avatar_url: o.avatarUrl,
+		}));
 		const topRepos = (u.topRepositories?.nodes ?? []).map((r: any) => ({
 			name: r.name,
 			full_name: r.nameWithOwner,

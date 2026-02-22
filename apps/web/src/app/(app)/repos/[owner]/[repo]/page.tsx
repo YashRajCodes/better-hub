@@ -22,10 +22,10 @@ export default async function RepoPage({
 	const pageDataPromise = getRepoPageData(owner, repo);
 	const readmePromise = getCachedReadmeHtml(owner, repo);
 
-	const pageData = await pageDataPromise;
-	if (!pageData) return null;
+	const pageDataResult = await pageDataPromise;
+	if (!pageDataResult.success) return null;
 
-	const { repoData, navCounts } = pageData;
+	const { repoData, navCounts } = pageDataResult.data;
 	const { permissions } = repoData;
 	const isMaintainer = permissions.push || permissions.admin || permissions.maintain;
 
@@ -38,7 +38,7 @@ export default async function RepoPage({
 		initialCommitActivity,
 		initialCIStatus,
 		initialPinnedItems,
-	] = await Promise.all([
+	] = (await Promise.all([
 		readmePromise,
 		isMaintainer ? getCachedOverviewPRs(owner, repo) : null,
 		isMaintainer ? getCachedOverviewIssues(owner, repo) : null,
@@ -46,7 +46,7 @@ export default async function RepoPage({
 		isMaintainer ? getCachedOverviewCommitActivity(owner, repo) : null,
 		isMaintainer ? getCachedOverviewCI(owner, repo) : null,
 		isMaintainer ? fetchPinnedItemsForRepo(owner, repo) : null,
-	]) as [
+	])) as [
 		string | null,
 		RepoOverviewProps["initialPRs"],
 		RepoOverviewProps["initialIssues"],
@@ -56,7 +56,8 @@ export default async function RepoPage({
 		RepoOverviewProps["initialPinnedItems"],
 	];
 
-	const readmeHtml = readmeHtmlRaw ?? await revalidateReadme(owner, repo, repoData.default_branch);
+	const readmeHtml =
+		readmeHtmlRaw ?? (await revalidateReadme(owner, repo, repoData.default_branch));
 
 	return (
 		<div className={isMaintainer ? "flex flex-col flex-1 min-h-0" : undefined}>

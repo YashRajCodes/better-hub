@@ -15,6 +15,74 @@ import {
 } from "@/lib/repo-data-cache-vc";
 import { setCachedRepoTree } from "@/lib/repo-data-cache";
 import { waitUntil } from "@vercel/functions";
+import { ExternalLink, ShieldAlert, AlertCircle } from "lucide-react";
+
+function RepoErrorPage({ owner, repo, error }: { owner: string; repo: string; error: string }) {
+	const githubUrl = `https://github.com/${owner}/${repo}`;
+	const isOAuthRestriction = error.includes("OAuth App access restrictions");
+	const isNotFound = error === "Repository not found";
+
+	return (
+		<div className="py-16 flex flex-col items-center justify-center gap-4 text-center max-w-md mx-auto">
+			<div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+				{isOAuthRestriction ? (
+					<ShieldAlert className="w-6 h-6 text-amber-500" />
+				) : (
+					<AlertCircle className="w-6 h-6 text-muted-foreground/50" />
+				)}
+			</div>
+			<div className="space-y-2">
+				<h1 className="text-sm font-medium">
+					{isOAuthRestriction
+						? "Access Restricted"
+						: isNotFound
+							? "Repository not found"
+							: "Unable to load repository"}
+				</h1>
+				{isOAuthRestriction ? (
+					<p className="text-xs text-muted-foreground/80 leading-relaxed">
+						The{" "}
+						<span className="font-medium text-foreground">
+							{owner}
+						</span>{" "}
+						organization has enabled OAuth App access
+						restrictions. To view this repository, an
+						organization admin needs to approve this app, or you
+						can view it directly on GitHub.
+					</p>
+				) : isNotFound ? (
+					<p className="text-xs text-muted-foreground/80">
+						This repository doesn&apos;t exist or you don&apos;t
+						have permission to view it.
+					</p>
+				) : (
+					<p className="text-xs text-muted-foreground/80 leading-relaxed font-mono">
+						{error}
+					</p>
+				)}
+			</div>
+			<a
+				href={githubUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+			>
+				<ExternalLink className="w-3 h-3" />
+				View on GitHub
+			</a>
+			{isOAuthRestriction && (
+				<a
+					href="https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/approving-oauth-apps-for-your-organization"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors underline underline-offset-2"
+				>
+					Learn about OAuth app approval
+				</a>
+			)}
+		</div>
+	);
+}
 
 export default async function RepoLayout({
 	children,
@@ -34,18 +102,13 @@ export default async function RepoLayout({
 		getCachedTags(owner, repoName),
 	]);
 
-	const pageData = await pageDataPromise;
-	if (!pageData) {
-		return (
-			<div className="py-16 text-center">
-				<p className="text-xs text-muted-foreground font-mono">
-					Repository not found
-				</p>
-			</div>
-		);
+	const pageDataResult = await pageDataPromise;
+	if (!pageDataResult.success) {
+		return <RepoErrorPage owner={owner} repo={repoName} error={pageDataResult.error} />;
 	}
 
-	const { repoData, navCounts, viewerHasStarred, viewerIsOrgMember, latestCommit } = pageData;
+	const { repoData, navCounts, viewerHasStarred, viewerIsOrgMember, latestCommit } =
+		pageDataResult.data;
 
 	waitUntil(prefetchPRData(owner, repoName, { prefetchIssues: !repoData.private }));
 
