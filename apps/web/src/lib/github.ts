@@ -2771,6 +2771,180 @@ export async function getRepoIssues(
 	});
 }
 
+// --- Combined issues page data via single GraphQL call ---
+
+export interface RepoIssuesPageData {
+	openIssues: RepoIssueNode[];
+	closedIssues: RepoIssueNode[];
+	openCount: number;
+	closedCount: number;
+}
+
+export interface RepoIssueNode {
+	id: number;
+	number: number;
+	title: string;
+	state: string;
+	state_reason?: string | null;
+	updated_at: string;
+	created_at: string;
+	closed_at: string | null;
+	comments: number;
+	user: { login: string; avatar_url: string } | null;
+	labels: Array<{ name?: string; color?: string | null }>;
+	assignees: Array<{ login: string; avatar_url: string }>;
+	milestone: { title: string } | null;
+	reactions: { total_count: number; "+1": number };
+	pull_request?: undefined;
+}
+
+const ISSUES_PAGE_GRAPHQL = `
+	query($owner: String!, $repo: String!) {
+		repository(owner: $owner, name: $repo) {
+			openIssues: issues(states: [OPEN], first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+				totalCount
+				nodes {
+					databaseId
+					number
+					title
+					state
+					stateReason
+					updatedAt
+					createdAt
+					closedAt
+					author { login avatarUrl }
+					labels(first: 20) { nodes { name color } }
+					assignees(first: 10) { nodes { login avatarUrl } }
+					milestone { title }
+					comments { totalCount }
+					reactions { totalCount }
+					thumbsUp: reactions(content: THUMBS_UP) { totalCount }
+				}
+			}
+			closedIssues: issues(states: [CLOSED], first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+				totalCount
+				nodes {
+					databaseId
+					number
+					title
+					state
+					stateReason
+					updatedAt
+					createdAt
+					closedAt
+					author { login avatarUrl }
+					labels(first: 20) { nodes { name color } }
+					assignees(first: 10) { nodes { login avatarUrl } }
+					milestone { title }
+					comments { totalCount }
+					reactions { totalCount }
+					thumbsUp: reactions(content: THUMBS_UP) { totalCount }
+				}
+			}
+		}
+	}
+`;
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function mapGraphQLIssueNode(node: Record<string, any>): RepoIssueNode {
+	const author = node.author as { login: string; avatarUrl: string } | null;
+	const stateReasonMap: Record<string, string> = {
+		COMPLETED: "completed",
+		NOT_PLANNED: "not_planned",
+		REOPENED: "reopened",
+	};
+	return {
+		id: node.databaseId,
+		number: node.number,
+		title: node.title,
+		state: (node.state as string).toLowerCase(),
+		state_reason: node.stateReason ? stateReasonMap[node.stateReason] ?? null : null,
+		updated_at: node.updatedAt,
+		created_at: node.createdAt,
+		closed_at: node.closedAt ?? null,
+		comments: node.comments?.totalCount ?? 0,
+		user: author ? { login: author.login, avatar_url: author.avatarUrl } : null,
+		labels: (node.labels?.nodes ?? []).map((l: any) => ({
+			name: l.name,
+			color: l.color,
+		})),
+		assignees: (node.assignees?.nodes ?? []).map((a: any) => ({
+			login: a.login,
+			avatar_url: a.avatarUrl,
+		})),
+		milestone: node.milestone ? { title: node.milestone.title } : null,
+		reactions: {
+			total_count: node.reactions?.totalCount ?? 0,
+			"+1": node.thumbsUp?.totalCount ?? 0,
+		},
+	};
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+async function fetchRepoIssuesPageGraphQL(
+	token: string,
+	owner: string,
+	repo: string,
+): Promise<RepoIssuesPageData> {
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: ISSUES_PAGE_GRAPHQL,
+			variables: { owner, repo },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL request failed: ${response.status}`);
+	}
+	const json = await response.json();
+	const r = json.data?.repository;
+	if (!r) {
+		return { openIssues: [], closedIssues: [], openCount: 0, closedCount: 0 };
+	}
+
+	return {
+		openIssues: (r.openIssues?.nodes ?? []).map(mapGraphQLIssueNode),
+		closedIssues: (r.closedIssues?.nodes ?? []).map(mapGraphQLIssueNode),
+		openCount: r.openIssues?.totalCount ?? 0,
+		closedCount: r.closedIssues?.totalCount ?? 0,
+	};
+}
+
+function buildRepoIssuesPageCacheKey(owner: string, repo: string): string {
+	return `repo_issues_page:${normalizeRepoKey(owner, repo)}`;
+}
+
+export async function getRepoIssuesPage(
+	owner: string,
+	repo: string,
+): Promise<RepoIssuesPageData> {
+	const authCtx = await getGitHubAuthContext();
+	const fallback: RepoIssuesPageData = {
+		openIssues: [],
+		closedIssues: [],
+		openCount: 0,
+		closedCount: 0,
+	};
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildRepoIssuesPageCacheKey(owner, repo),
+		cacheType: "repo_issues_page",
+		ttlMs: CACHE_TTL_MS.repoIssues,
+		fallback,
+		jobType: "repo_issues",
+		jobPayload: { owner, repo, state: "all" },
+		fetchRemote: async () => {
+			if (!authCtx) return fallback;
+			return fetchRepoIssuesPageGraphQL(authCtx.token, owner, repo);
+		},
+	});
+}
+
 export async function invalidateRepoPullRequestsCache(owner: string, repo: string) {
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx) return;

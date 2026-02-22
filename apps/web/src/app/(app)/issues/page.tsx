@@ -3,7 +3,6 @@ import { IssuesContent } from "@/components/issues/issues-content";
 
 export default async function IssuesPage() {
 	const user = await getAuthenticatedUser();
-	console.log(user);
 	if (!user) return null;
 
 	const [assigned, created, mentioned] = await Promise.all([
