@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
 	getOrg,
@@ -9,6 +10,27 @@ import {
 } from "@/lib/github";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string }>;
+}): Promise<Metadata> {
+	const { owner } = await params;
+	const orgData = await getOrg(owner).catch(() => null);
+	if (orgData) {
+		return { title: orgData.name || orgData.login };
+	}
+	const userData = await getUser(owner).catch(() => null);
+	if (userData) {
+		return {
+			title: userData.name
+				? `${userData.name} (${userData.login})`
+				: userData.login,
+		};
+	}
+	return { title: owner };
+}
 
 export default async function OwnerPage({ params }: { params: Promise<{ owner: string }> }) {
 	const { owner } = await params;
