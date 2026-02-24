@@ -234,7 +234,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										<Search className="w-3.5 h-3.5" />
 										Search repos
 										<DropdownMenuShortcut className="flex items-center gap-0.5 text-[10px] font-mono">
-											<Command className="size-[5px]" />/
+											<Command className="w-2.5 h-2.5" />K
 										</DropdownMenuShortcut>
 									</DropdownMenuItem>
 								</DropdownMenuGroup>

@@ -156,13 +156,6 @@ const GITHUB_NON_USER_PATHS = new Set([
 	"watching",
 ]);
 
-/** GitHub top-level paths that look like owner/repo but aren't real repositories */
-const GITHUB_NON_REPO_OWNERS = new Set([
-	"user-attachments",
-	"assets",
-	"github",
-]);
-
 type ParsedGitHubUrl =
 	| {
 			owner: string;
@@ -192,9 +185,6 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 		}
 
 		const [owner, repo, ...rest] = parts;
-
-		// Skip GitHub system paths that are not real repos (e.g. user-attachments/assets)
-		if (GITHUB_NON_REPO_OWNERS.has(owner)) return null;
 
 		if (rest.length === 0) return { owner, repo, type: "repo" };
 		if (rest[0] === "pull" && rest[1])

@@ -19,31 +19,6 @@ function flashCheck(btn: HTMLButtonElement) {
 	}, 1500);
 }
 
-/** Create and show a fullscreen lightbox overlay for the given image src */
-function openLightbox(src: string, alt: string) {
-	const overlay = document.createElement("div");
-	overlay.className = "ghmd-lightbox";
-	overlay.innerHTML = `<img src="${src}" alt="${alt}" class="ghmd-lightbox-img" />`;
-
-	function close() {
-		overlay.classList.add("ghmd-lightbox-closing");
-		overlay.addEventListener("animationend", () => overlay.remove(), { once: true });
-		document.removeEventListener("keydown", handleKey);
-	}
-
-	function handleKey(e: KeyboardEvent) {
-		if (e.key === "Escape") close();
-	}
-
-	overlay.addEventListener("click", (e) => {
-		// Close when clicking the backdrop, not the image itself
-		if ((e.target as HTMLElement) === overlay) close();
-	});
-
-	document.addEventListener("keydown", handleKey);
-	document.body.appendChild(overlay);
-}
-
 export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 	const ref = useRef<HTMLDivElement>(null);
 
@@ -60,21 +35,8 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 		// Inject copy buttons on every <pre> that doesn't already have one
 		injectCopyButtons(container);
 
-		// Make images in markdown look clickable
-		const images = container.querySelectorAll<HTMLImageElement>(".ghmd img");
-		for (const img of images) {
-			img.style.cursor = "zoom-in";
-		}
-
 		function handleClick(e: MouseEvent) {
 			const target = e.target as HTMLElement;
-
-			// Image lightbox
-			if (target.tagName === "IMG" && target.closest(".ghmd")) {
-				const img = target as HTMLImageElement;
-				openLightbox(img.src, img.alt || "");
-				return;
-			}
 
 			// Package-manager install copy
 			const pkgBtn = target.closest<HTMLButtonElement>(".ghmd-pkg-copy[data-copy]");

@@ -16,7 +16,6 @@ interface PRReviewFormProps {
 	owner: string;
 	repo: string;
 	pullNumber: number;
-	isOwnPR?: boolean;
 	participants?: Array<{ login: string; avatar_url: string }>;
 }
 
@@ -50,7 +49,7 @@ const reviewOptions: {
 	},
 ];
 
-export function PRReviewForm({ owner, repo, pullNumber, isOwnPR, participants }: PRReviewFormProps) {
+export function PRReviewForm({ owner, repo, pullNumber, participants }: PRReviewFormProps) {
 	const router = useRouter();
 	const { emit } = useMutationEvents();
 	const [open, setOpen] = useState(false);
@@ -149,10 +148,9 @@ export function PRReviewForm({ owner, repo, pullNumber, isOwnPR, participants }:
 							}) => {
 								const isSelected = selected === key;
 								const isDisabled =
-									(isOwnPR && key !== "COMMENT") ||
-									(key === "REQUEST_CHANGES" &&
-										!body.trim() &&
-										!isSelected);
+									key === "REQUEST_CHANGES" &&
+									!body.trim() &&
+									!isSelected;
 
 								return (
 									<button

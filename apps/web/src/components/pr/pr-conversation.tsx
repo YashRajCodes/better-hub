@@ -18,6 +18,8 @@ import { CommitActivityGroup } from "./commit-activity-group";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { CollapsibleDescription } from "./collapsible-description";
 import { ChatMessageWrapper } from "./chat-message-wrapper";
+import { PRChecksPanel } from "./pr-checks-panel";
+import type { CheckStatus } from "@/lib/github";
 
 interface BaseUser {
 	login: string;
@@ -152,11 +154,13 @@ export async function PRConversation({
 	owner,
 	repo,
 	pullNumber,
+	checkStatus,
 }: {
 	entries: TimelineEntry[];
 	owner: string;
 	repo: string;
 	pullNumber: number;
+	checkStatus?: CheckStatus;
 }) {
 	const grouped = groupEntries(entries);
 
@@ -288,13 +292,28 @@ export async function PRConversation({
 						/>
 					);
 				}
+				if (entry.type === "description") {
+					return (
+						<div key={entry.id} className="space-y-3">
+							<ChatMessage
+								entry={entry}
+								owner={owner}
+								repo={repo}
+								pullNumber={pullNumber}
+							/>
+							{checkStatus && (
+								<PRChecksPanel
+									checkStatus={checkStatus}
+									owner={owner}
+									repo={repo}
+								/>
+							)}
+						</div>
+					);
+				}
 				return (
 					<ChatMessage
-						key={
-							entry.type === "description"
-								? entry.id
-								: `comment-${entry.id}`
-						}
+						key={`comment-${entry.id}`}
 						entry={entry}
 						owner={owner}
 						repo={repo}
