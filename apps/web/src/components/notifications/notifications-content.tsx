@@ -231,20 +231,18 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 												</span>
 											</div>
 										</Link>
-										{notif.unread && (
-											<button
-												disabled={isMarking}
-												onClick={(e) => handleMarkDone(e, notif.id)}
-												className="shrink-0 mt-0.5 p-1 text-muted-foreground/50 hover:text-foreground/70 transition-colors cursor-pointer disabled:opacity-50"
-												title="Mark as done"
-											>
-												{isMarking ? (
-													<Loader2 className="w-3.5 h-3.5 animate-spin" />
-												) : (
-													<Check className="w-3.5 h-3.5" />
-												)}
-											</button>
-										)}
+										<button
+											disabled={isMarking}
+											onClick={(e) => handleMarkDone(e, notif.id)}
+											className="shrink-0 mt-0.5 p-1 text-muted-foreground/50 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"
+											title="Mark as done"
+										>
+											{isMarking ? (
+												<Loader2 className="w-3.5 h-3.5 animate-spin" />
+											) : (
+												<Check className="w-3.5 h-3.5" />
+											)}
+										</button>
 									</div>
 								);
 							})}

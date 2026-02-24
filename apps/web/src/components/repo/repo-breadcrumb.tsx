@@ -83,7 +83,7 @@ export function RepoBreadcrumb({ owner, repoName, ownerType }: RepoBreadcrumbPro
 		<div className="flex items-center gap-1 text-xs">
 			<Link
 				href={`/${owner}`}
-				className="text-muted-foreground/60 hover:text-foreground transition-colors tracking-tight"
+				className="text-muted-foreground hover:text-foreground transition-colors tracking-tight"
 			>
 				{owner}
 			</Link>

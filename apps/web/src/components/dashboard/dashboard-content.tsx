@@ -1,7 +1,7 @@
 "use client";
 
 import { noSSR } from "foxact/no-ssr";
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,12 +23,15 @@ import {
 	Trash2,
 	X,
 	Lightbulb,
+	Check,
+	Loader2,
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
+import { markNotificationDone } from "@/app/(app)/repos/actions";
 import type {
 	IssueItem,
 	RepoItem,
@@ -243,6 +246,9 @@ function WorkTabs({
 	activeTab: TabKey;
 	activity: Array<ActivityEvent>;
 }) {
+	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+	const visibleNotifs = notifications.filter((n) => !doneIds.has(n.id));
+
 	if (!hasWork && activeTab !== "notifs") {
 		return (
 			<div className="flex-1 min-h-0 border border-border py-12 text-center">
@@ -288,9 +294,13 @@ function WorkTabs({
 					<EmptyTab message="No assigned issues" />
 				))}
 			{activeTab === "notifs" &&
-				(notifications.length > 0 ? (
-					notifications.map((notif) => (
-						<NotificationRow key={notif.id} notif={notif} />
+				(visibleNotifs.length > 0 ? (
+					visibleNotifs.map((notif) => (
+						<NotificationRow
+							key={notif.id}
+							notif={notif}
+							onDone={(id) => setDoneIds((prev) => new Set([...prev, id]))}
+						/>
 					))
 				) : (
 					<EmptyTab message="No notifications" />
@@ -333,9 +343,10 @@ function getNotificationHref(notif: NotificationItem): string {
 	return `/${repo}`;
 }
 
-function NotificationRow({ notif }: { notif: NotificationItem }) {
+function NotificationRow({ notif, onDone }: { notif: NotificationItem; onDone: (id: string) => void }) {
 	const href = getNotificationHref(notif);
 	const repo = notif.repository.full_name;
+	const [marking, startMarking] = useTransition();
 	const icon =
 		notif.subject.type === "PullRequest" ? (
 			<GitPullRequest className="w-3.5 h-3.5" />
@@ -346,12 +357,9 @@ function NotificationRow({ notif }: { notif: NotificationItem }) {
 		);
 
 	return (
-		<Link
-			href={href}
-			className="group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors border-b border-border/60 last:border-b-0"
-		>
+		<div className="group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors border-b border-border/60 last:border-b-0">
 			<span className="text-muted-foreground/70 shrink-0">{icon}</span>
-			<div className="flex-1 min-w-0">
+			<Link href={href} className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					{notif.unread && (
 						<span className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" />
@@ -382,9 +390,25 @@ function NotificationRow({ notif }: { notif: NotificationItem }) {
 						<TimeAgo date={notif.updated_at} />
 					</span>
 				</div>
-			</div>
-			<ChevronRight className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-		</Link>
+			</Link>
+			<button
+				disabled={marking}
+				onClick={() => {
+					startMarking(async () => {
+						const res = await markNotificationDone(notif.id);
+						if (res.success) onDone(notif.id);
+					});
+				}}
+				className="shrink-0 p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"
+				title="Mark as done"
+			>
+				{marking ? (
+					<Loader2 className="w-3.5 h-3.5 animate-spin" />
+				) : (
+					<Check className="w-3.5 h-3.5" />
+				)}
+			</button>
+		</div>
 	);
 }
 

@@ -109,7 +109,7 @@ export function RepoSidebar({
 						className="w-32 aspect-square rounded-sm"
 					/>
 					{description && (
-						<p className="text-xs text-muted-foreground/80 leading-relaxed">
+						<p className="text-xs text-muted-foreground leading-relaxed">
 							{description}
 						</p>
 					)}
@@ -290,7 +290,7 @@ export function RepoSidebar({
 			<div className="block lg:hidden px-0">
 				<div className="mb-2">
 					{description && (
-						<p className="text-xs text-muted-foreground/80 mb-1.5 max-w-2xl">
+						<p className="text-xs text-muted-foreground mb-1.5 max-w-2xl">
 							{description}
 						</p>
 					)}
