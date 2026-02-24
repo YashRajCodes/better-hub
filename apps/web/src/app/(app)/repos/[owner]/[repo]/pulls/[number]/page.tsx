@@ -418,6 +418,10 @@ export default async function PRDetailPage({
 											pullNumber={
 												pr.number
 											}
+											isOwnPR={
+												pr.user?.login ===
+												currentUser?.login
+											}
 											participants={
 												participants
 											}

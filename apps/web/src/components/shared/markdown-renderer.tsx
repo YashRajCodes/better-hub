@@ -77,6 +77,19 @@ function resolveUrls(html: string, ctx: RepoContext): string {
 	return html;
 }
 
+/**
+ * Rewrite github.com/user-attachments image/video URLs to go through our proxy.
+ * These URLs require GitHub auth cookies to resolve the S3 redirect.
+ */
+function proxyGitHubAssets(html: string): string {
+	return html.replace(
+		/((?:src|poster|srcset)=")([^"]*github\.com\/user-attachments\/assets\/[^"]+)(")/gi,
+		(_match, before, url, after) => {
+			return `${before}/api/image-proxy?url=${encodeURIComponent(url)}${after}`;
+		},
+	);
+}
+
 // Convert GitHub alert syntax: > [!NOTE] / [!TIP] / [!IMPORTANT] / [!WARNING] / [!CAUTION]
 function processAlerts(html: string): string {
 	const alertTypes: Record<string, { icon: string; className: string; label: string }> = {
@@ -371,6 +384,9 @@ export async function renderMarkdownToHtml(
 	if (repoContext) {
 		html = resolveUrls(html, repoContext);
 	}
+
+	// Proxy GitHub user-attachment images/videos through our API to handle auth redirects
+	html = proxyGitHubAssets(html);
 
 	// Convert github.com links to internal app paths
 	html = html.replace(/<a\s+href="(https:\/\/github\.com\/[^"]+)"/gi, (_match, href) => {

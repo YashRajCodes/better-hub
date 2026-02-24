@@ -388,6 +388,9 @@ export async function resolveReviewThread(
 			}),
 		});
 		const json = await response.json();
+		if (!response.ok) {
+			return { error: json.message || `GitHub API error (${response.status})` };
+		}
 		if (json.errors?.length) {
 			return { error: json.errors[0].message };
 		}
@@ -424,6 +427,9 @@ export async function unresolveReviewThread(
 			}),
 		});
 		const json = await response.json();
+		if (!response.ok) {
+			return { error: json.message || `GitHub API error (${response.status})` };
+		}
 		if (json.errors?.length) {
 			return { error: json.errors[0].message };
 		}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -314,16 +315,18 @@ function ThreadCard({
 	repo: string;
 	pullNumber: number;
 }) {
+	const router = useRouter();
 	const [expanded, setExpanded] = useState(false);
 	const [isPending, startTransition] = useTransition();
 
 	const handleToggleResolve = (e: React.MouseEvent) => {
 		e.stopPropagation();
 		startTransition(async () => {
-			if (thread.isResolved) {
-				await unresolveReviewThread(thread.id, owner, repo, pullNumber);
-			} else {
-				await resolveReviewThread(thread.id, owner, repo, pullNumber);
+			const res = thread.isResolved
+				? await unresolveReviewThread(thread.id, owner, repo, pullNumber)
+				: await resolveReviewThread(thread.id, owner, repo, pullNumber);
+			if (!res.error) {
+				router.refresh();
 			}
 		});
 	};

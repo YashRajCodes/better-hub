@@ -4816,18 +4816,18 @@ function SidebarReviews({
 	const handleResolve = (threadId: string, resolve: boolean) => {
 		if (!owner || !repo || !pullNumber) return;
 		startTransition(async () => {
-			if (resolve) {
-				await resolveReviewThread(threadId, owner, repo, pullNumber);
-			} else {
-				await unresolveReviewThread(threadId, owner, repo, pullNumber);
+			const res = resolve
+				? await resolveReviewThread(threadId, owner, repo, pullNumber)
+				: await unresolveReviewThread(threadId, owner, repo, pullNumber);
+			if (!res.error) {
+				emit({
+					type: resolve ? "pr:thread-resolved" : "pr:thread-unresolved",
+					owner,
+					repo,
+					number: pullNumber,
+				});
+				router.refresh();
 			}
-			emit({
-				type: resolve ? "pr:thread-resolved" : "pr:thread-unresolved",
-				owner,
-				repo,
-				number: pullNumber,
-			});
-			router.refresh();
 		});
 	};
 
