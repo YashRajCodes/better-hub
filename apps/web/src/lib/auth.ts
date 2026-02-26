@@ -7,7 +7,7 @@ import { waitUntil } from "@vercel/functions";
 import { all } from "better-all";
 import { headers } from "next/headers";
 import { cache } from "react";
-import { dash } from "@better-auth/infra";
+import { dash, sentinel } from "@better-auth/infra";
 import { createHash } from "@better-auth/utils/hash";
 import { admin, oAuthProxy } from "better-auth/plugins";
 import { patSignIn } from "./auth-plugins/pat-signin";
@@ -36,6 +36,7 @@ export const auth = betterAuth({
 		}),
 		admin(),
 		patSignIn(),
+		sentinel(),
 		...(process.env.VERCEL
 			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
 			: []),

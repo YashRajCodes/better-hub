@@ -548,7 +548,7 @@ function ReposTabs({
 				{tab === "trending" && (
 					<Link
 						href="/trending"
-						className="ml-auto mr-3 flex items-center gap-1 text-[10px] font-mono text-muted-foreground/50 hover:text-foreground transition-colors"
+						className="ml-auto mr-3 flex items-center gap-1 text-[10px] font-mono text-muted-foreground/70 hover:text-foreground transition-colors"
 					>
 						See all
 						<ChevronRight className="w-3 h-3" />
@@ -779,16 +779,16 @@ function RepoRow({
 					className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
 				/>
 				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-					<span className="text-muted-foreground">
+					<span className="text-muted-foreground/60">
 						{repo.owner.login}
 					</span>
-					<span className="text-muted-foreground/25 mx-0.5">/</span>
+					<span className="text-muted-foreground/40 mx-0.5">/</span>
 					<span className="font-medium">{repo.name}</span>
 				</span>
 				{repo.private && (
-					<Lock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+					<Lock className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
 				)}
-				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
+				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/65">
 					{repo.language && (
 						<span className="flex items-center gap-1 font-mono">
 							<span
@@ -883,16 +883,16 @@ function PinnedRepoRow({
 					draggable={false}
 				/>
 				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-					<span className="text-muted-foreground">
+					<span className="text-muted-foreground/60">
 						{repo.owner.login}
 					</span>
 					<span className="text-muted-foreground/25 mx-0.5">/</span>
 					<span className="font-medium">{repo.name}</span>
 				</span>
 				{repo.private && (
-					<Lock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+					<Lock className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
 				)}
-				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
+				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/65">
 					{repo.language && (
 						<span className="flex items-center gap-1 font-mono">
 							<span
@@ -948,15 +948,15 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors">
-						<span className="text-muted-foreground">
+						<span className="text-muted-foreground/60">
 							{repo.owner?.login}
 						</span>
-						<span className="text-muted-foreground/25 mx-0.5">
+						<span className="text-muted-foreground/40 mx-0.5">
 							/
 						</span>
 						<span className="font-medium">{repo.name}</span>
 					</span>
-					<div className="flex items-center gap-2 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
+					<div className="flex items-center gap-2 ml-auto shrink-0 text-[10px] text-muted-foreground/65">
 						{repo.language && (
 							<span className="flex items-center gap-1 font-mono">
 								<span
@@ -984,7 +984,7 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 					</div>
 				</div>
 				{repo.description && (
-					<p className="text-[10px] text-muted-foreground truncate mt-0.5">
+					<p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
 						{repo.description}
 					</p>
 				)}
@@ -1234,8 +1234,8 @@ function ActivityMarquee({ activity }: { activity: Array<ActivityEvent> }) {
 			href={item.href}
 			className="inline-flex items-center gap-1 shrink-0 hover:text-foreground transition-colors"
 		>
-			<span className="text-muted-foreground/30">{item.time}</span>
-			<span className="text-muted-foreground/50">{item.icon}</span>
+			<span className="text-muted-foreground/50">{item.time}</span>
+			<span className="text-muted-foreground/70">{item.icon}</span>
 			<span>{item.text}</span>
 			<span className="text-muted-foreground/15 mx-1">&middot;</span>
 		</Link>

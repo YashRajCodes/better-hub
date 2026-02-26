@@ -347,7 +347,6 @@ export default async function IssueDetailPage({
 						},
 					},
 					suggestions: [
-						"Create a prompt request for this issue",
 						"Summarize this issue",
 						"Suggest a fix",
 						"Draft a response",
