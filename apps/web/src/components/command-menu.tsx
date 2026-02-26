@@ -36,6 +36,7 @@ import {
 	Eye,
 	Pin,
 } from "lucide-react";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { signOut } from "@/lib/auth-client";
 import { cn, formatNumber } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
@@ -642,7 +643,7 @@ export function CommandMenu() {
 							],
 							action: () => globalChat.toggleChat(),
 							icon: Ghost,
-							shortcut: "⌘I",
+							shortcut: "Mod+I",
 						},
 					]
 				: []),
@@ -660,7 +661,7 @@ export function CommandMenu() {
 							action: () => switchMode("files"),
 							icon: FileText,
 							keepOpen: true,
-							shortcut: "⌘G",
+							shortcut: "Mod+G",
 						},
 					]
 				: []),
@@ -771,7 +772,7 @@ export function CommandMenu() {
 				action: () => switchMode("search"),
 				icon: Search,
 				keepOpen: true,
-				shortcut: "⌘/",
+				shortcut: "Mod+/",
 			},
 			{
 				name: "Change Theme",
@@ -921,7 +922,7 @@ export function CommandMenu() {
 				icon: FileText,
 				action: () => switchMode("files"),
 				keepOpen: true,
-				shortcut: "⌘G",
+				shortcut: "Mod+G",
 			});
 			const base = `/${repoContext[0]}/${repoContext[1]}`;
 			items.push({
@@ -947,7 +948,7 @@ export function CommandMenu() {
 				icon: Search,
 				action: () => switchMode("search"),
 				keepOpen: true,
-				shortcut: "⌘/",
+				shortcut: "Mod+/",
 			});
 			// Top 2 recently visited repos
 			const repoViews = recentViews.filter((v) => v.type === "repo").slice(0, 2);
@@ -970,7 +971,7 @@ export function CommandMenu() {
 					description: "AI assistant",
 					icon: Ghost,
 					action: () => globalChat.toggleChat(),
-					shortcut: "⌘I",
+					shortcut: "Mod+I",
 				});
 			}
 		}
@@ -1655,9 +1656,9 @@ export function CommandMenu() {
 																</span>
 																{item.shortcut && (
 																	<kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border/60 dark:border-white/8 bg-muted/50 dark:bg-white/3 px-1.5 font-mono text-[10px] text-muted-foreground/50 shrink-0">
-																		{
-																			item.shortcut
-																		}
+																		{formatForDisplay(
+																			item.shortcut,
+																		)}
 																	</kbd>
 																)}
 															</CommandItemButton>
@@ -1710,9 +1711,9 @@ export function CommandMenu() {
 																</span>
 																{tool.shortcut && (
 																	<kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border/60 dark:border-white/8 bg-muted/50 dark:bg-white/3 px-1.5 font-mono text-[10px] text-muted-foreground/50 shrink-0">
-																		{
-																			tool.shortcut
-																		}
+																		{formatForDisplay(
+																			tool.shortcut,
+																		)}
 																	</kbd>
 																)}
 															</CommandItemButton>
