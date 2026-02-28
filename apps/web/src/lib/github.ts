@@ -4803,7 +4803,7 @@ export async function getRepoPullRequestsWithStats(
 		repository(owner: $owner, name: $name) {
 			${countFields}
 			${previewFields}
-			pullRequests(first: ${limit}, states: ${statesArg}, orderBy: { field: UPDATED_AT, direction: DESC }${afterArg}) {
+			pullRequests(first: ${limit}, states: ${statesArg}, orderBy: { field: CREATED_AT, direction: DESC }${afterArg}) {
 				pageInfo { hasNextPage endCursor }
 				nodes { ${PR_NODE_FRAGMENT} }
 			}
