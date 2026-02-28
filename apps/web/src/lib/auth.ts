@@ -87,6 +87,8 @@ export const auth = betterAuth({
 		"https://www.better-hub.com",
 		// Vercel preview
 		"https://better-hub-*-better-auth.vercel.app",
+		// Beta site
+		"https://beta.better-hub.com",
 	],
 });
 
