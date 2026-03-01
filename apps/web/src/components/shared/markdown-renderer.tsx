@@ -204,14 +204,19 @@ function processAlerts(html: string): string {
 	return html;
 }
 
-/** Add id anchors to headings */
+/** Add id anchors to headings, handling duplicates with -1, -2 suffixes */
 function addHeadingAnchors(html: string): string {
+	const seen = new Map<string, number>();
 	return html.replace(/<(h[1-6])>([\s\S]*?)<\/\1>/gi, (_match, tag, content) => {
 		const text = content.replace(/<[^>]+>/g, "").trim();
-		const id = text
-			.toLowerCase()
-			.replace(/[^\w\s-]/g, "")
-			.replace(/\s+/g, "-");
+		let id =
+			text
+				.toLowerCase()
+				.replace(/[^\w\s-]/g, "")
+				.replace(/\s+/g, "-") || `heading`;
+		const count = seen.get(id) ?? 0;
+		seen.set(id, count + 1);
+		if (count > 0) id = `${id}-${count}`;
 		return `<${tag} id="${id}">${content}</${tag}>`;
 	});
 }
