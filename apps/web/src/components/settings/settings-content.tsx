@@ -142,7 +142,9 @@ export function SettingsContent({
 				{activeTab === "ai" && (
 					<AIModelTab settings={settings} onUpdate={handleUpdate} />
 				)}
-				{activeTab === "billing" && <BillingTab />}
+				{activeTab === "billing" && (
+					<BillingTab settings={settings} onNavigate={setActiveTab} />
+				)}
 				{activeTab === "account" && (
 					<AccountTab
 						user={user}
