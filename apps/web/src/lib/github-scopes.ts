@@ -44,8 +44,14 @@ export const SCOPE_GROUPS: ScopeGroup[] = [
 		label: "Organizations",
 		description: "Manage org memberships",
 		reason: "Lets you see and switch between your organizations and their repositories.",
-		scopes: ["admin:org", "write:org", "read:org"],
-		defaultOn: true,
+		scopes: ["write:org", "read:org"],
+	},
+	{
+		id: "admin_orgs",
+		label: "Org admin",
+		description: "Full admin control of orgs and teams",
+		reason: "Grants admin-level access to manage organization settings, teams, and membership. Only needed if you manage orgs.",
+		scopes: ["admin:org"],
 	},
 	{
 		id: "notifications",
