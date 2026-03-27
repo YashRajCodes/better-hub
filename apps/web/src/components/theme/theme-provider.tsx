@@ -26,6 +26,11 @@ import {
 	type BorderRadiusPreset,
 } from "@/lib/themes/border-radius";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { loadAndRegisterAllCustomThemes } from "@/lib/custom-themes";
+
+if (typeof window !== "undefined") {
+	loadAndRegisterAllCustomThemes();
+}
 
 interface ColorThemeContext {
 	/** Currently active theme id */
@@ -108,9 +113,9 @@ function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
 			localStorage.setItem(MODE_KEY, mode);
 			return { themeId: storedTheme, mode };
 		}
-		// Marketplace themes aren't registered yet at initial load — preserve
+		// Marketplace or custom themes may not be registered yet at initial load — preserve
 		// the stored preference so the async fetch can apply it later.
-		if (storedTheme.startsWith("mp:")) {
+		if (storedTheme.startsWith("mp:") || storedTheme.startsWith("custom:")) {
 			const mode =
 				storedMode ??
 				(window.matchMedia?.("(prefers-color-scheme: dark)").matches
@@ -185,6 +190,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 							parsed.push(td);
 						}
 					}
+					loadAndRegisterAllCustomThemes();
 					setMpThemes(parsed);
 
 					const stored = localStorage.getItem(STORAGE_KEY);

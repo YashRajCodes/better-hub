@@ -70,9 +70,21 @@ export function getTheme(id: string): ThemeDefinition | undefined {
 }
 
 export function registerStoreTheme(theme: ThemeDefinition): void {
-	if (themeMap.has(theme.id)) return;
+	const existingIndex = storeThemes.findIndex((t) => t.id === theme.id);
+	if (existingIndex >= 0) {
+		storeThemes[existingIndex] = theme;
+	} else {
+		storeThemes.push(theme);
+	}
 	themeMap.set(theme.id, theme);
-	storeThemes.push(theme);
+}
+
+export function unregisterStoreTheme(id: string): void {
+	const idx = storeThemes.findIndex((t) => t.id === id);
+	if (idx >= 0) {
+		storeThemes.splice(idx, 1);
+	}
+	themeMap.delete(id);
 }
 
 export function clearStoreThemes(): void {

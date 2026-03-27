@@ -49,6 +49,7 @@ import { getLanguageColor } from "@/lib/github-utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { getRecentViews, type RecentViewItem } from "@/lib/recent-views";
 import { useColorTheme } from "@/components/theme/theme-provider";
+import { useThemeEditor } from "@/components/theme/theme-editor-provider";
 import { useIconTheme } from "@/components/theme-store/icon-theme-provider";
 import type { IconMapping } from "@/lib/theme-store-types";
 import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
@@ -154,6 +155,7 @@ export function CommandMenu() {
 		storeThemes: installedColorThemes,
 	} = useColorTheme();
 	const { activeIconThemeId, installedIconThemes, setActiveIconTheme } = useIconTheme();
+	const { customThemes, openEditor: openThemeEditor } = useThemeEditor();
 	const { emit } = useMutationEvents();
 
 	// Recently viewed
@@ -1243,47 +1245,86 @@ export function CommandMenu() {
 	]);
 
 	// --- Theme mode items ---
-	const { installedThemes, regularThemes, brandedThemes } = useMemo(() => {
-		const filterFn = (t: (typeof colorThemes)[0]) => {
-			if (!search.trim()) return true;
-			const s = search.toLowerCase();
-			return (
-				t.name.toLowerCase().includes(s) ||
-				t.description.toLowerCase().includes(s)
-			);
-		};
+	const { installedThemes, regularThemes, brandedThemes, filteredCustomThemes } =
+		useMemo(() => {
+			const filterFn = (t: (typeof colorThemes)[0]) => {
+				if (!search.trim()) return true;
+				const s = search.toLowerCase();
+				return (
+					t.name.toLowerCase().includes(s) ||
+					t.description.toLowerCase().includes(s)
+				);
+			};
 
-		const installed: typeof colorThemes = [];
-		const regular: typeof colorThemes = [];
-		const branded: typeof colorThemes = [];
+			const customFilterFn = (t: { name: string; description: string }) => {
+				if (!search.trim()) return true;
+				const s = search.toLowerCase();
+				return (
+					t.name.toLowerCase().includes(s) ||
+					t.description.toLowerCase().includes(s)
+				);
+			};
 
-		for (const theme of installedColorThemes) {
-			if (filterFn(theme)) installed.push(theme);
-		}
+			const installed: typeof colorThemes = [];
+			const regular: typeof colorThemes = [];
+			const branded: typeof colorThemes = [];
 
-		for (const theme of colorThemes) {
-			if (!filterFn(theme)) continue;
-			if (theme.icon) {
-				branded.push(theme);
-			} else {
-				regular.push(theme);
+			for (const theme of installedColorThemes) {
+				if (filterFn(theme)) installed.push(theme);
 			}
-		}
 
-		return {
-			installedThemes: installed,
-			regularThemes: regular,
-			brandedThemes: branded,
-		};
-	}, [mode, search, colorThemes, installedColorThemes]);
+			for (const theme of colorThemes) {
+				if (!filterFn(theme)) continue;
+				if (theme.icon) {
+					branded.push(theme);
+				} else {
+					regular.push(theme);
+				}
+			}
+
+			const custom = customThemes.filter(customFilterFn);
+
+			return {
+				installedThemes: installed,
+				regularThemes: regular,
+				brandedThemes: branded,
+				filteredCustomThemes: custom,
+			};
+		}, [mode, search, colorThemes, installedColorThemes, customThemes]);
 
 	const themeItems = useMemo(() => {
-		return [...installedThemes, ...regularThemes, ...brandedThemes].map((t) => ({
-			id: `theme-${t.id}`,
-			action: () => setColorTheme(t.id),
-			keepOpen: true,
-		}));
-	}, [installedThemes, regularThemes, brandedThemes, setColorTheme]);
+		const items: { id: string; action: () => void; keepOpen: boolean }[] = [
+			// Regular and installed themes
+			...[...installedThemes, ...regularThemes, ...brandedThemes].map((t) => ({
+				id: `theme-${t.id}`,
+				action: () => setColorTheme(t.id),
+				keepOpen: true as const,
+			})),
+			// Create custom theme action
+			{
+				id: "create-custom-theme",
+				action: () => {
+					setOpen(false);
+					openThemeEditor();
+				},
+				keepOpen: false,
+			},
+			// Custom themes
+			...filteredCustomThemes.map((t) => ({
+				id: `custom-theme-${t.id}`,
+				action: () => setColorTheme(t.id),
+				keepOpen: true as const,
+			})),
+		];
+		return items;
+	}, [
+		installedThemes,
+		regularThemes,
+		brandedThemes,
+		filteredCustomThemes,
+		setColorTheme,
+		openThemeEditor,
+	]);
 
 	// --- Radius mode items ---
 	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
@@ -1588,15 +1629,32 @@ export function CommandMenu() {
 		prevModeRef.current = mode;
 
 		if (enteredThemeMode && !search.trim()) {
-			const allThemes = [...installedThemes, ...regularThemes, ...brandedThemes];
-			const currentThemeIndex = allThemes.findIndex(
-				(t) => t.id === currentThemeId,
-			);
-			if (currentThemeIndex !== -1) {
-				setSelectedIndex(currentThemeIndex);
+			const allThemeDefs = [
+				...installedThemes,
+				...regularThemes,
+				...brandedThemes,
+			];
+			const builtinIndex = allThemeDefs.findIndex((t) => t.id === currentThemeId);
+			if (builtinIndex !== -1) {
+				setSelectedIndex(builtinIndex);
+			} else {
+				const customIndex = customThemes.findIndex(
+					(t) => t.id === currentThemeId,
+				);
+				if (customIndex !== -1) {
+					setSelectedIndex(allThemeDefs.length + 1 + customIndex);
+				}
 			}
 		}
-	}, [mode, search, installedThemes, regularThemes, brandedThemes, currentThemeId]);
+	}, [
+		mode,
+		search,
+		installedThemes,
+		regularThemes,
+		brandedThemes,
+		filteredCustomThemes,
+		currentThemeId,
+	]);
 
 	useEffect(() => {
 		if (!listRef.current) return;
@@ -2603,12 +2661,127 @@ export function CommandMenu() {
 												)}
 											</CommandGroup>
 										)}
+										{
+											<CommandGroup title="Custom Themes">
+												{(() => {
+													const idx =
+														getNextIndex();
+													return (
+														<CommandItemButton
+															key="create-new-theme-action"
+															index={
+																idx
+															}
+															selected={
+																selectedIndex ===
+																idx
+															}
+															onClick={() =>
+																openThemeEditor()
+															}
+														>
+															{/* Fixed icon wrapper to use min-w-[28px] like standard branded icons */}
+															<div className="min-w-[28px] flex items-center justify-center shrink-0">
+																<div className="w-4 h-4 rounded-full border border-border/40 bg-primary/10 flex items-center justify-center">
+																	<Plus className="size-2.5 shrink-0 text-primary" />
+																</div>
+															</div>
+
+															{/* Removed wrapper div, made direct children to align side-by-side */}
+															<span className="text-[13px] text-foreground flex-1">
+																Create
+																Custom
+																Theme
+															</span>
+															<span className="text-[11px] text-muted-foreground hidden sm:block">
+																Open
+																the
+																theme
+																editor
+																to
+																build
+																your
+																own
+															</span>
+														</CommandItemButton>
+													);
+												})()}
+
+												{filteredCustomThemes?.map(
+													(
+														theme,
+													) => {
+														const idx =
+															getNextIndex();
+														const isActive =
+															currentThemeId ===
+															theme.id;
+														return (
+															<CommandItemButton
+																key={
+																	theme.id
+																}
+																index={
+																	idx
+																}
+																selected={
+																	selectedIndex ===
+																	idx
+																}
+																onClick={() =>
+																	setColorTheme(
+																		theme.id,
+																	)
+																}
+															>
+																<span className="flex items-center gap-1 shrink-0">
+																	<span
+																		className="w-3 h-3 rounded-full border border-border/40"
+																		style={{
+																			backgroundColor:
+																				theme
+																					.dark
+																					.bgPreview,
+																		}}
+																	/>
+																	<span
+																		className="w-3 h-3 rounded-full border border-border/40"
+																		style={{
+																			backgroundColor:
+																				theme
+																					.dark
+																					.accentPreview,
+																		}}
+																	/>
+																</span>
+
+																<span className="text-[13px] text-foreground flex-1">
+																	{
+																		theme.name
+																	}
+																</span>
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
+																	Custom
+																	theme
+																</span>
+
+																{isActive && (
+																	<Check className="size-3.5 text-success shrink-0" />
+																)}
+															</CommandItemButton>
+														);
+													},
+												)}
+											</CommandGroup>
+										}
 										{hasQuery &&
 											installedThemes.length ===
 												0 &&
 											regularThemes.length ===
 												0 &&
 											brandedThemes.length ===
+												0 &&
+											filteredCustomThemes.length ===
 												0 && (
 												<div className="py-8 text-center text-sm text-muted-foreground/70">
 													No

@@ -40,6 +40,7 @@ export function generateThemeScript(themes: ThemeDefinition[]): string {
 		// Resolve theme data — for mp: themes, read the cached color data from localStorage
 		`var t=themes[id];`,
 		`if(!t&&id.indexOf("mp:")===0){try{var raw=localStorage.getItem("mp-theme-data");if(raw)t=JSON.parse(raw)}catch(e){}}`,
+		`if(!t&&id.indexOf("custom:")===0){try{var raw=localStorage.getItem("custom-themes");if(raw){var arr=JSON.parse(raw);var ct=arr.find(function(x){return x.id===id});if(ct)t={dark:ct.dark,light:ct.light}}}catch(e){}}`,
 		`if(!t)t=themes["hub"];`,
 		`if(!t)return;`,
 		// Apply mode class & color scheme
